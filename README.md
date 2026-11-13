@@ -272,3 +272,8 @@ values under `experiments:` and a table in `experiments.make_tables`.
 - GPU parameters are representative assumptions (in dte), not measurements.
 - The downlink answer travels at the uplink rate.
 - Fast fading is averaged out.
+
+## License
+
+The code is released under the MIT License (see `LICENSE`). The Azure LLM inference traces in `data/` are
+redistributed under their original license (CC BY 4.0, Microsoft Azure Public Dataset).
