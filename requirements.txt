@@ -1,0 +1,8 @@
+# Python 3.10+ (tested on 3.11). All packages ship wheels for Windows 11 and macOS.
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+matplotlib>=3.7
+PyYAML>=6.0
+cvxpy>=1.4        # reference solver used only by the unit tests (closed form vs. cvxpy)
+pytest>=7.4

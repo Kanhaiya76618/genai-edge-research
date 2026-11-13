@@ -1,0 +1,138 @@
+# =============================================================================
+# genai-edge-research -- configuration of the paper
+#   "Integrated Networking and Computing for GenAI Serving at the Wireless Edge"
+# Values marked [Table II] are exactly the defaults of Table II of the paper.
+# Values marked [not in paper] are needed by the code but not stated in the paper;
+# they are listed in README section 5 so they can be added to Table II.
+# =============================================================================
+
+seed: 2026                  # base RNG seed; scenario k of a data point uses SeedSequence([seed, k])   [not in paper]
+n_jobs: 0                   # worker processes, 0 = all CPU cores
+
+scenarios:                  # independent random scenarios per data point (paper Sec. V-A)
+  default: 20               # every plotted point [paper: 20]
+  table3: 30                # Table III and Fig. 6 [paper: 30]
+  heatmap: 10               # Fig. 7 [paper: 10]
+  lambda: 10                # energy-latency sweep
+  runtime: 5                # run-time figure
+  small: 20                 # exhaustive-search instances per point
+
+# ---------------------------------------------------------------------------
+# Network layout (Sec. V-A)
+# ---------------------------------------------------------------------------
+layout:
+  area_m: 1000.0            # 1 km x 1 km [Table II]
+  n_nodes: 4                # N = 4 edge nodes on a 2x2 grid at (250,250),(750,250),(250,750),(750,750) m [Table II]
+  n_users: 40               # M = 40 [Table II]
+  hotspot_share: 0.4        # 40% of users in a Gaussian crowd hotspot [Table II]
+  hotspot_sigma_m: 120.0    # hotspot standard deviation [Table II]
+  hotspot_node: 0           # hotspot centred on edge node 1 (index 0) [paper: "near node 1"]
+  min_distance_m: 10.0      # minimum UE-node distance for the path-loss model [not in paper]
+
+# ---------------------------------------------------------------------------
+# Channel (Sec. III-B, Eq. (1))
+# ---------------------------------------------------------------------------
+channel:
+  pathloss_a_db: 128.1      # PL = 128.1 + 37.6 log10(d_km) dB, 3GPP TR 36.814 [Table II, ref. 27]
+  pathloss_b_db: 37.6       # (same)
+  shadowing_std_db: 8.0     # log-normal shadowing [Table II]
+  ue_psd_dbm_hz: -47.0      # fixed UE power spectral density p_bar [Table II]
+  noise_psd_dbm_hz: -174.0  # N0 [Table II]
+  noise_figure_db: 9.0      # receiver noise figure [Table II]
+  interference_margin_db: 3.0  # I0 as a margin over noise [Table II]
+  bandwidth_mhz: 20.0       # B_n [Table II]
+  max_spectral_eff: null    # optional cap on log2(1+SINR); null = none, as in Eq. (1)
+  min_spectral_eff: 0.1     # coverage: a node can serve a user only if eta >= 0.1 bit/s/Hz (about -8 dB SINR) or it is the user's best node [Sec. IV-D]
+  ue_pmax_w: 0.2            # 23 dBm UE power cap, only used to report how often p_bar*b_i would exceed it [Sec. III-D]
+
+# ---------------------------------------------------------------------------
+# Requests (Sec. III-A, V-A)
+# ---------------------------------------------------------------------------
+workload:
+  prompt_median_tokens: 200.0  # log-normal prompt length, median 200 [Table II]
+  prompt_sigma: 0.8            # log-normal shape of the prompt length [not in paper]
+  output_median_tokens: 150.0  # log-normal output length, median 150 [Table II]
+  output_sigma: 0.8            # log-normal shape of the output length [not in paper]
+  min_tokens: 4                # lengths clipped to [min_tokens, max_tokens] [not in paper]
+  max_tokens: 2048             # (same)
+  bits_per_token: 32           # beta [Table II]
+  attach_prob: 0.4             # share of requests with an image [Table II]
+  attach_kb_min: 50.0          # image size U(50, 500) KB, 1 KB = 1000 bytes [Table II]
+  attach_kb_max: 500.0         # (same)
+  source: synthetic           # synthetic (log-normal, Table II) | trace (pairs sampled from trace_file) [Sec. V-H]
+  trace_file: null            # e.g. data/AzureLLMInferenceTrace_conv.csv (Azure LLM inference trace 2023) [Sec. V-H]
+  predictor: noisy             # output-length predictor: noisy | oracle | median [Sec. V-A]
+  predictor_sigma: 0.5         # sigma_p: o_hat = o * LogN(0, sigma_p^2) [Table II]
+  ttft_per_prompt_token: 0.0   # tau_pre: TTFT budget tau_ttft + tau_pre * s_i (0 = Table II; traces: rho/f_max) [Sec. V-H]
+
+classes:                       # (share, weight w, TTFT allowance tau_ttft [s], per-token allowance tau_tok [s]) [Table II]
+  - {name: Basic,    share: 0.5, weight: 1.0, ttft_s: 1.0, tok_s: 0.020}
+  - {name: Premium,  share: 0.3, weight: 2.0, ttft_s: 0.5, tok_s: 0.010}
+  - {name: Critical, share: 0.2, weight: 5.0, ttft_s: 0.5, tok_s: 0.010}
+
+# ---------------------------------------------------------------------------
+# GPU (Sec. III-C) -- work measured in decode-token equivalents (dte)
+# ---------------------------------------------------------------------------
+gpu:
+  throughput_dte_s: 1500.0  # F_n, aggregate GPU throughput of one edge node [Table II]
+  f_max_dte_s: 200.0        # single-stream ceiling f^max [Table II]
+  prefill_cost: 0.125       # rho, dte per prompt token [Table II]
+  static_power_w: 75.0      # static GPU power for the post-hoc total-energy metric only (not optimised) [Sec. V-E]
+  kv_capacity_tokens: 16384 # K_n: KV-cache capacity per node [tokens] = 8 GiB at 0.5 MiB/token (7B model, fp16) [Table II]
+
+energy:
+  kappa: 8.9e-6             # DVFS coefficient [J s^2 / dte^3] [Table II]
+  lambda: 0.0               # energy weight [s/J] [Table II]
+
+algorithm:
+  dual_steps: 25            # K [Table II]
+  dual_step_size: 8.0       # epsilon [Table II]
+
+# ---------------------------------------------------------------------------
+# Experiments: one entry per figure / table of the paper
+# ---------------------------------------------------------------------------
+experiments:
+  table_methods: [Nearest-ES, Comm-only, Compute-only, Load-aware, Decoupled, Classical-JCC, Decoupled-SLA, Load-aware-SLA, JCC-Greedy, JCC-Edge]   # Table III
+  sweep_methods: [Decoupled, Load-aware, Classical-JCC, Decoupled-SLA, Load-aware-SLA, JCC-Edge]    # sweeps (Figs. 3-4)
+  users_sweep: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]        # snapshot load sweep
+  hotspot_sweep: [0.0, 0.2, 0.4, 0.6, 0.8]                       # spatial imbalance
+  bandwidth_sweep_mhz: [5, 10, 20, 40, 80]                       # radio resources
+  gpu_sweep_dte_s: [750, 1125, 1500, 2250, 3000, 4500]           # compute resources
+  heatmap_users: 60                                              # heatmap load (moderate overload)
+  heatmap_bandwidth_mhz: [5, 10, 20, 40, 80]                     # heatmap rows
+  heatmap_gpu_dte_s: [750, 1125, 1500, 2250, 3000]               # heatmap columns
+  heatmap_methods: [Load-aware, Classical-JCC, Decoupled-SLA, Load-aware-SLA, JCC-Edge]
+  lambda_sweep: [0.0, 0.03, 0.1, 0.3, 1.0]                       # energy weight sweep
+  lambda_methods: [Decoupled, Load-aware-SLA, JCC-Edge]
+  predictors:                                                    # output-length predictor test
+    - {label: "Oracle", predictor: oracle}
+    - {label: "Noisy, sigma_p=0.25", predictor: noisy, predictor_sigma: 0.25}
+    - {label: "Noisy, sigma_p=0.5 (def.)", predictor: noisy, predictor_sigma: 0.5}
+    - {label: "Noisy, sigma_p=1.0", predictor: noisy, predictor_sigma: 1.0}
+    - {label: "Median (constant)", predictor: median}
+  predictor_users: [40, 80]                                      # loads of the predictor test
+  predictor_methods: [Load-aware-SLA, JCC-Edge]
+  ablation_users: [40, 60, 80, 100]                              # ablation loads
+  kv_users: 80                                                   # KV-capacity sweep load
+  kv_sweep_tokens: [4096, 8192, 16384, 32768]                    # K_n sweep [tokens]
+  kv_methods: [Decoupled, Load-aware-SLA, JCC-Edge]
+  rho_sweep: [0.0625, 0.125, 0.30]                               # prefill cost sweep (0.30 = measured on Mistral-7B)
+  rho_users: [40, 80]                                            # loads of the rho sweep
+  rho_methods: [Load-aware-SLA, Classical-JCC, JCC (rho=1), JCC-Edge]
+  traces: [conv, code, conv+ps, code+ps]                         # trace workloads; +ps = prompt-scaled TTFT budget
+  trace_users: [20, 40, 60]                                      # loads for the trace experiment
+  trace_methods: [Load-aware, Decoupled-SLA, Classical-JCC, Load-aware-SLA, JCC-Edge]
+  small_instance:                                                # exhaustive search is feasible
+    n_nodes: 3                # N = 3 so that N^M associations can be enumerated
+    users: [4, 5, 6, 7, 8]
+    load_factors: [1.0, 2.0]  # 1 = default load per node, 2 = twice the default load per node
+    methods: ["Comm-only", "Decoupled", "Greedy (Phi)", "Greedy + LS (Phi)", "JCC-Edge"]
+  runtime_users: [20, 40, 80, 120, 160, 200]                     # run-time figure
+  online:                                                        # dynamic arrivals (online.py)
+    rates: [5, 10, 15, 20, 25, 30]                               # Poisson arrival rate [requests/s]
+    policies: [Decoupled, Load-aware, Load-aware-SLA, JCC-Edge]
+    seeds: 3                  # independent arrival processes per point
+    horizon_s: 300.0          # simulated time [s]
+    warmup_s: 50.0            # requests arriving earlier are not counted [s]
+    cooldown_s: 30.0          # requests arriving in the last cooldown_s are not counted [s]
+    drain_s: 60.0             # simulation stops drain_s after the last arrival; unfinished requests fail [s]

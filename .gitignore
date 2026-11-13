@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+results/quick/
+figures/quick/
+report/dashboard_quick.html
+llm_measure/models/
+*.gguf
+.DS_Store

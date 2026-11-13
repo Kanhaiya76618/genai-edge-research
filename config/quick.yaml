@@ -1,0 +1,22 @@
+# Quick check of the whole pipeline (about 1 minute): same model as default.yaml, fewer scenarios
+# and sweep points. Outputs go to results/quick and figures/quick. Not for the paper.
+inherit: default.yaml
+
+scenarios: {default: 3, table3: 4, heatmap: 2, lambda: 2, runtime: 2, small: 2}
+
+experiments:
+  users_sweep: [10, 40, 70, 100]
+  hotspot_sweep: [0.0, 0.4, 0.8]
+  bandwidth_sweep_mhz: [5, 20, 80]
+  gpu_sweep_dte_s: [750, 1500, 4500]
+  heatmap_bandwidth_mhz: [5, 20, 80]
+  heatmap_gpu_dte_s: [750, 1500, 3000]
+  lambda_sweep: [0.0, 0.1, 1.0]
+  ablation_users: [40, 80]
+  predictor_users: [40]
+  kv_sweep_tokens: [4096, 16384]
+  rho_users: [40]
+  trace_users: [40]
+  small_instance: {users: [4, 6], load_factors: [1.0]}
+  runtime_users: [20, 80]
+  online: {rates: [10, 20], seeds: 1, horizon_s: 80.0, warmup_s: 20.0, cooldown_s: 10.0}
